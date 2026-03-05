@@ -79,7 +79,7 @@ const registerUser = asynchandler(async (req, res) => {
         new ApiResponse(200, createdUser, "User registered successfully")
     )
 })
-const loginUser = asyncHandler(async (req, res) => {
+const loginUser = asynchandler(async (req, res) => {
     //   req body data
     // username or email
     // find the user
@@ -87,7 +87,7 @@ const loginUser = asyncHandler(async (req, res) => {
     // access token and refresh token
     // send cookies
     const { email, username, password } = req.body
-    if (!username || !email) {
+    if (!username && !email) {
         throw new ApiError(400, "Username or email is required")
     }
     const user = await User.findOne({
@@ -121,18 +121,27 @@ const loginUser = asyncHandler(async (req, res) => {
         )
 
 })
-const logoutUser = asyncHandler(async (req, res) => {
-    res.clearCookie("accessToken", {
+const logoutUser = asynchandler(async (req, res) => {
+    User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: {
+                refreshToken: undefined
+            }
+        },
+        {
+            new: true
+        }
+    )
+    const options = {
         httpOnly: true,
-        secure: true
-    })
-    res.clearCookie("refreshToken", {
-        httpOnly: true,
-        secure: true
-    })
-    return res.status(200).json(new ApiResponse(200, {}, "User logged out successfully"))
+        secure: true,
+    }
+    return res.status(200).clearCookie("accessToken", options).clearCookie("refreshToken", options)
+        .json(new ApiResponse(200, null, "User logged out successfully"))
 })
 export {
     registerUser,
-    loginUser
+    loginUser,
+    logoutUser
 }
